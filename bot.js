@@ -9,7 +9,15 @@ const { Telegraf, Markup } = require('telegraf');
 const fs = require('fs');
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
-const scheduleData = JSON.parse(fs.readFileSync('./schedule.json', 'utf8'));
+
+// Читаем JSON и проверяем его на ошибки
+let scheduleData;
+try {
+    scheduleData = JSON.parse(fs.readFileSync('./schedule.json', 'utf8'));
+} catch (err) {
+    console.error('ОШИБКА В JSON ФАЙЛЕ:', err.message);
+    process.exit(1);
+}
 
 function formatWeek(weekType) {
   const weekTitle = weekType === 'upper' ? scheduleData.week_title_upper : scheduleData.week_title_lower;
@@ -33,46 +41,32 @@ function formatWeek(weekType) {
   return result;
 }
 
-// Создаем кнопки, которые будут под сообщением
 const inlineKeyboard = Markup.inlineKeyboard([
   [Markup.button.callback('🔼 Верхняя неделя', 'show_upper')],
   [Markup.button.callback('🔽 Нижняя неделя', 'show_lower')]
 ]);
 
 bot.start((ctx) => {
-  ctx.reply('Привет! Выбери неделю. Я буду обновлять это сообщение, чтобы не засорять чат:', inlineKeyboard);
+  ctx.reply('Привет! Я обновился. Выбери неделю на кнопках:', inlineKeyboard);
 });
 
-// Обработка нажатия на встроенную кнопку "Верхняя"
 bot.action('show_upper', async (ctx) => {
   try {
-    await ctx.editMessageText(formatWeek('upper'), {
-      parse_mode: 'Markdown',
-      ...inlineKeyboard
-    });
-  } catch (e) {
-    // Если пользователь нажал на кнопку той же недели, которая уже открыта, Telegram выдаст ошибку. Игнорируем её.
-    ctx.answerCbQuery();
-  }
+    await ctx.answerCbQuery();
+    await ctx.editMessageText(formatWeek('upper'), { parse_mode: 'Markdown', ...inlineKeyboard });
+  } catch (e) { console.log('Тот же текст'); }
 });
 
-// Обработка нажатия на встроенную кнопку "Нижняя"
 bot.action('show_lower', async (ctx) => {
   try {
-    await ctx.editMessageText(formatWeek('lower'), {
-      parse_mode: 'Markdown',
-      ...inlineKeyboard
-    });
-  } catch (e) {
-    ctx.answerCbQuery();
-  }
+    await ctx.answerCbQuery();
+    await ctx.editMessageText(formatWeek('lower'), { parse_mode: 'Markdown', ...inlineKeyboard });
+  } catch (e) { console.log('Тот же текст'); }
 });
 
-// Старые команды теперь тоже будут вызывать новое сообщение с кнопками
-bot.command('up_week', (ctx) => ctx.replyWithMarkdown(formatWeek('upper'), inlineKeyboard));
-bot.command('low_week', (ctx) => ctx.replyWithMarkdown(formatWeek('lower'), inlineKeyboard));
-
-bot.launch().then(() => console.log('🚀 Бот с авто-обновлением запущен!'));
+bot.launch()
+  .then(() => console.log('🚀 Бот запущен успешно!'))
+  .catch((err) => console.error('Ошибка запуска:', err));
 
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
