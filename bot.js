@@ -1,3 +1,9 @@
+const http = require('http');
+http.createServer((req, res) => {
+  res.write('Bot is running!');
+  res.end();
+}).listen(process.env.PORT || 8080);
+
 require('dotenv').config();
 const { Telegraf } = require('telegraf');
 const fs = require('fs');
